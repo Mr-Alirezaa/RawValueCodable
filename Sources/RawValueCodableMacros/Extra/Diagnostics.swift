@@ -35,18 +35,18 @@ extension MacroDiagnostic: DiagnosticMessage {
         Diagnostic(node: node, message: self)
     }
 }
-
-enum MacroFixIt: String, FixItMessage {
-    case addRawRepresentableConformance
-
-    var message: String {
-        switch self {
-        case .addRawRepresentableConformance:
-            "Add 'RawRepresentable' conformance"
-        }
-    }
-
-    var fixItID: MessageID {
-        MessageID(domain: "RawValueCodableMacros", id: rawValue)
-    }
-}
+//
+//enum MacroFixIt: String, FixItMessage {
+//    case addRawRepresentableConformance
+//
+//    var message: String {
+//        switch self {
+//        case .addRawRepresentableConformance:
+//            "Add 'RawRepresentable' conformance"
+//        }
+//    }
+//
+//    var fixItID: MessageID {
+//        MessageID(domain: "RawValueCodableMacros", id: rawValue)
+//    }
+//}

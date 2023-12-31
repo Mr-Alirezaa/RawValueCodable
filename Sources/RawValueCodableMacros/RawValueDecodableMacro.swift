@@ -4,9 +4,7 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import SwiftDiagnostics
 
-public struct RawValueDecodableMacro: MemberMacro, ExtensionMacro, RawValueCodingMacro {
-    typealias Diagnostic = MacroDiagnostic<Self>
-
+public struct RawValueDecodableMacro: RawValueCodingMacro {
     static let macroName = "RawValueDecodable"
 
     static let conformanceName = "Decodable"
@@ -16,6 +14,10 @@ public struct RawValueDecodableMacro: MemberMacro, ExtensionMacro, RawValueCodin
     static let rawRepresentable = "RawRepresentable"
     static var qualifiedRawRepresentable = "Swift.\(rawRepresentable)"
     static var rawRepresentableNames = [rawRepresentable, qualifiedRawRepresentable]
+}
+
+extension RawValueDecodableMacro: MemberMacro, ExtensionMacro {
+    typealias Diagnostic = MacroDiagnostic<Self>
 
     public static func expansion<D: DeclGroupSyntax, C: MacroExpansionContext>(
         of node: AttributeSyntax,

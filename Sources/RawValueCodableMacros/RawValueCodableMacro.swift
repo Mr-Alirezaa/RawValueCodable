@@ -8,10 +8,9 @@ protocol RawValueCodingMacro: MemberMacro, ExtensionMacro {
     static var macroName: String { get }
 }
 
-public struct RawValueCodableMacro: MemberMacro, ExtensionMacro, RawValueCodingMacro {
-    typealias Diagnostic = MacroDiagnostic<Self>
-
+public struct RawValueCodableMacro: RawValueCodingMacro {
     static let macroName = "RawValueCodable"
+
     static let conformanceName = "Codable"
     static var qualifiedConformanceName: String { "Swift.\(Self.conformanceName)" }
     static var conformanceNames: [String] { [Self.conformanceName, Self.qualifiedConformanceName] }
@@ -19,6 +18,10 @@ public struct RawValueCodableMacro: MemberMacro, ExtensionMacro, RawValueCodingM
     static let rawRepresentable = "RawRepresentable"
     static var qualifiedRawRepresentable = "Swift.\(rawRepresentable)"
     static var rawRepresentableNames = [Self.rawRepresentable, Self.qualifiedRawRepresentable]
+}
+
+extension RawValueCodableMacro: MemberMacro, ExtensionMacro {
+    typealias Diagnostic = MacroDiagnostic<Self>
 
     public static func expansion<D: DeclGroupSyntax, C: MacroExpansionContext>(
         of node: AttributeSyntax,
@@ -26,31 +29,12 @@ public struct RawValueCodableMacro: MemberMacro, ExtensionMacro, RawValueCodingM
         in context: C
     ) throws -> [DeclSyntax] {
         do {
-            return try RawValueDecodableMacro.expansion(of: node, providingMembersOf: declaration, in: context)
-            + RawValueEncodableMacro.expansion(of: node, providingMembersOf: declaration, in: context)
-        } catch var error as DiagnosticsError {
-            let diagnostics = error.diagnostics.map { diag in
-                switch diag.diagMessage {
-                case MacroDiagnostic<RawValueDecodableMacro>.notRawRepresentable,
-                    MacroDiagnostic<RawValueEncodableMacro>.notRawRepresentable:
-                    return SwiftDiagnostics.Diagnostic(
-                        node: diag.node,
-                        position: diag.position,
-                        message: Diagnostic.notRawRepresentable,
-                        highlights: diag.highlights,
-                        notes: diag.notes,
-                        fixIts: diag.fixIts
-                    )
-                default:
-                    return diag
-                }
-            }
+            let decodableMacroExpansion = try RawValueDecodableMacro.expansion(of: node, providingMembersOf: declaration, in: context)
+            let encodableMacroExpansion = try RawValueEncodableMacro.expansion(of: node, providingMembersOf: declaration, in: context)
 
-            error.diagnostics = diagnostics
-            throw error
-
+            return [decodableMacroExpansion, encodableMacroExpansion].flatMap { $0 }
         } catch {
-            throw error
+            throw error.replacingDiagnosticType()
         }
     }
     
@@ -70,5 +54,42 @@ public struct RawValueCodableMacro: MemberMacro, ExtensionMacro, RawValueCodingM
             """
 
         return [ext.cast(ExtensionDeclSyntax.self)]
+    }
+}
+
+extension Error {
+    fileprivate func replacingDiagnosticType() -> Error {
+        guard case var error as DiagnosticsError = self else { return self }
+
+        let diagnostics = error.diagnostics.map { diag in
+            switch diag.diagMessage {
+            case RawValueDecodableMacro.Diagnostic.notRawRepresentable,
+                RawValueEncodableMacro.Diagnostic.notRawRepresentable:
+                SwiftDiagnostics.Diagnostic(
+                    node: diag.node,
+                    position: diag.position,
+                    message: RawValueCodableMacro.Diagnostic.notRawRepresentable,
+                    highlights: diag.highlights,
+                    notes: diag.notes,
+                    fixIts: diag.fixIts
+                )
+
+            case RawValueDecodableMacro.Diagnostic.enumMissingRawValueType,
+                RawValueEncodableMacro.Diagnostic.enumMissingRawValueType:
+                SwiftDiagnostics.Diagnostic(
+                    node: diag.node,
+                    position: diag.position,
+                    message: RawValueCodableMacro.Diagnostic.enumMissingRawValueType,
+                    highlights: diag.highlights,
+                    notes: diag.notes,
+                    fixIts: diag.fixIts
+                )
+            default:
+                diag
+            }
+        }
+
+        error.diagnostics = diagnostics
+        return error
     }
 }
