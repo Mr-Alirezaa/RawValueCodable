@@ -24,15 +24,11 @@ extension RawValueEncodableMacro: MemberMacro, ExtensionMacro {
         providingMembersOf declaration: D,
         in context: C
     ) throws -> [DeclSyntax] {
-        let inheritedTypeNames = declaration.inheritanceClause?
-            .inheritedTypes
-            .map { $0.type.trimmedDescription } ?? []
-
         let isDeclEnum = declaration.is(EnumDeclSyntax.self)
-        let inheritsFromRawRepresentable = inheritedTypeNames.contains(where: { rawRepresentableNames.contains($0) })
+        let inheritsFromRawRepresentable = declaration.inherits(from: rawRepresentableNames)
 
         switch (inheritsFromRawRepresentable, isDeclEnum) {
-        case (false, true) where inheritedTypeNames.isEmpty:
+        case (false, true) where declaration.inheritedTypes().isEmpty:
             throw DiagnosticsError(
                 diagnostics: [
                     Diagnostic.enumMissingRawValueType.diagnose(at: declaration)
