@@ -4,24 +4,22 @@ import XCTest
 import MacroTesting
 import RawValueCodableMacros
 
-let isRecording: Bool = false
-
-final class RawValueCodableTests: XCTestCase {
+final class RawValueEncodableTests: XCTestCase {
     override func invokeTest() {
         withMacroTesting(
             isRecording: isRecording,
             macros: [
-                "RawValueCodable": RawValueCodableMacro.self,
+                "RawValueEncodable": RawValueEncodableMacro.self,
             ]
         ) {
             super.invokeTest()
         }
     }
 
-    func testAccessControl_WhenTypeIsInternal_ShouldGenerateInternalFunctions() throws {
+    func testAccessControl_WhenTypeIsInternal_ShouldGenerateInternalEncode() throws {
         assertMacro {
             """
-            @RawValueCodable
+            @RawValueEncodable
             struct ID: RawRepresentable {
                 var rawValue: String
                 init(rawValue: String) {
@@ -35,10 +33,6 @@ final class RawValueCodableTests: XCTestCase {
                 var rawValue: String
                 init(rawValue: String) {
                     self.rawValue = rawValue
-                }
-
-                init(from decoder: Decoder) throws {
-                    try self.init(rawValue: decoder.singleValueContainer().decode(RawValue.self))
                 }
 
                 func encode(to encoder: Encoder) throws {
@@ -47,16 +41,16 @@ final class RawValueCodableTests: XCTestCase {
                 }
             }
 
-            extension ID: Swift.Codable {
+            extension ID: Swift.Encodable {
             }
             """
         }
     }
 
-    func testAccessControl_WhenTypeIsPublic_ShouldGeneratePublicFunctions() throws {
+    func testAccessControl_WhenTypeIsPublic_ShouldGeneratePublicEncode() throws {
         assertMacro {
             """
-            @RawValueCodable
+            @RawValueEncodable
             public struct ID: RawRepresentable {
                 public var rawValue: String
                 public init(rawValue: String) {
@@ -70,10 +64,6 @@ final class RawValueCodableTests: XCTestCase {
                 public var rawValue: String
                 public init(rawValue: String) {
                     self.rawValue = rawValue
-                }
-
-                public init(from decoder: Decoder) throws {
-                    try self.init(rawValue: decoder.singleValueContainer().decode(RawValue.self))
                 }
 
                 public func encode(to encoder: Encoder) throws {
@@ -82,7 +72,7 @@ final class RawValueCodableTests: XCTestCase {
                 }
             }
 
-            public extension ID: Swift.Codable {
+            public extension ID: Swift.Encodable {
             }
             """
         }
@@ -91,13 +81,13 @@ final class RawValueCodableTests: XCTestCase {
     func testNonRawRepresentable_WhenTypeIsNotRawRepresentable_ShouldDiagnoseWithError() {
         assertMacro {
             """
-            @RawValueCodable
+            @RawValueEncodable
             public struct ID {
             }
             """
         } diagnostics: {
             """
-            @RawValueCodable
+            @RawValueEncodable
             ╰─ 🛑 @RawValueCodable can only be applied to a type conforming to 'RawRepresentable'
             public struct ID {
             }
@@ -105,51 +95,10 @@ final class RawValueCodableTests: XCTestCase {
         }
     }
 
-    func testEnumRawValue_WhenEnumTypeHasAtLeastOneConformingType_ShouldGenerateFunctionsAsIfTheConformingTypeIsRawValue() {
+    func testCustomRawRepresentableEnum_WhenEnumConformsToRawRepresentable_ShouldGenerateNormalResult() throws {
         assertMacro {
             """
-            @RawValueCodable
-            enum Texture: String {
-                case soft
-                case hard
-            }
-            """
-        } expansion: {
-            """
-            enum Texture: String {
-                case soft
-                case hard
-
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-                    let value = try Texture(rawValue: container.decode(RawValue.self))
-
-                    guard let value else {
-                        throw DecodingError.dataCorruptedError(
-                            in: container,
-                            debugDescription: "Unable to decode value of type `RawValue` from data."
-                        )
-                    }
-
-                    self = value
-                }
-
-                func encode(to encoder: Encoder) throws {
-                    var container = encoder.singleValueContainer()
-                    try container.encode(self.rawValue)
-                }
-            }
-
-            extension Texture: Swift.Codable {
-            }
-            """
-        }
-    }
-
-    func testCustomRawRepresentableEnum_WhenEnumConformsToRawRepresentable_ShouldGenerateNormalResult() {
-        assertMacro {
-            """
-            @RawValueCodable
+            @RawValueEncodable
             enum Texture: RawRepresentable {
                 case soft
                 case hard
@@ -201,27 +150,13 @@ final class RawValueCodableTests: XCTestCase {
                     }
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-                    let value = try Texture(rawValue: container.decode(RawValue.self))
-
-                    guard let value else {
-                        throw DecodingError.dataCorruptedError(
-                            in: container,
-                            debugDescription: "Unable to decode value of type `RawValue` from data."
-                        )
-                    }
-
-                    self = value
-                }
-
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.singleValueContainer()
                     try container.encode(self.rawValue)
                 }
             }
 
-            extension Texture: Swift.Codable {
+            extension Texture: Swift.Encodable {
             }
             """
         }

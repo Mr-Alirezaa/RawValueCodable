@@ -13,10 +13,6 @@ let package = Package(
             name: "RawValueCodable",
             targets: ["RawValueCodable"]
         ),
-        .executable(
-            name: "RawValueCodableClient",
-            targets: ["RawValueCodableClient"]
-        ),
     ],
     dependencies: [
         // Depend on the Swift 5.9 release of SwiftSyntax
